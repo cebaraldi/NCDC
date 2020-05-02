@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 
-import scala.swing.FileChooser
+import scala.swing.{FileChooser}
 
 case class GHCNData(
                      sid: String,
@@ -32,12 +32,12 @@ object GHCNDaily extends App {
       val e = line.split(",")
       if (e.length > 7)
         GHCNData(
-          e(0), toDate(e(1),"yyyyMMdd"), e(2),
+          e(0), toDate(e(1), "yyyyMMdd"), e(2),
           toIntOrNull(e(3)), toIntOrNull(e(4)), toIntOrNull(e(5)), toIntOrNull(e(6)),
           toHHMM(e(7)))
       else
         GHCNData(
-          e(0), toDate(e(1),"yyyyMMdd"), e(2),
+          e(0), toDate(e(1), "yyyyMMdd"), e(2),
           toIntOrNull(e(3)), toIntOrNull(e(4)), toIntOrNull(e(5)), toIntOrNull(e(6)),
           None)
     } //.cache()
@@ -91,7 +91,7 @@ object GHCNDaily extends App {
   val pass = "guest" // or your email address
   val server = "ftp.ncdc.noaa.gov"
 
-//  val outPath = "/home/sprk/tmp/"
+  //  val outPath = "/home/sprk/tmp/"
   val outPath = "/media/datalake/" // important last backslash ...
   val inPath = "pub/data/ghcn/daily/by_year"
 
@@ -102,7 +102,7 @@ object GHCNDaily extends App {
     println(s"Remote Port:\t${ftp.getRemotePort}")
     println(s"Remote Address:\t${ftp.getRemoteAddress}")
 
-    if(!ftp.login(user, pass)) throw new Exception("Login failed")
+    if (!ftp.login(user, pass)) throw new Exception("Login failed")
 
     ftp.setFileType(FTP.BINARY_FILE_TYPE) // or FTP.ASCII_FILE_TYPE
     println(s"Status:\t${ftp.getStatus}")
@@ -113,11 +113,10 @@ object GHCNDaily extends App {
 
     val filter = FTPFileFilters.NON_NULL
     val dirList: Array[FTPFile] = ftp.listFiles(inPath, filter)
-//    val yearPattern = "^[0-9]{4}.csv.gz$".r
-//    val yearPattern = "^176[4,5].csv.gz$".r
-//    val yearPattern = "^20[0-9]{2}.csv.gz$|^20[0-9]{2}.csv.gz$".r
-//    val yearPattern = "^2019.csv.gz$|^2020.csv.gz$".r
-    val yearPattern = "^2019.csv.gz$|^2020.csv.gz$".r
+    //    val yearPattern = "^[0-9]{4}.csv.gz$".r
+    //    val yearPattern = "^176[4,5].csv.gz$".r
+    val yearPattern = "^20[0-9]{2}.csv.gz$|^20[0-9]{2}.csv.gz$".r
+
     for (d <- dirList) {
       yearPattern.findFirstIn(d.getName) match {
         case Some(s) => by_year(server, inPath, s, outPath)
@@ -131,47 +130,47 @@ object GHCNDaily extends App {
     val chooser = new FileChooser
     chooser.multiSelectionEnabled = true
     chooser.title = "Open Year Files"
-    if(chooser.showOpenDialog(null)==FileChooser.Result.Approve){
-        val n = chooser.selectedFiles.size
-        println(s"$n files selected")
-        val fileName = chooser.selectedFiles(0).getName
-        println(s"1: $fileName")
-        //        val df1 = createRDD(spark, outPath, selectedFile.get(0).getName)//.as[GHCNData]
-        val rdd1 = createRDD(outPath, fileName)
-//        println(rdd1.count())
+    if (chooser.showOpenDialog(null) == FileChooser.Result.Approve) {
+      val n = chooser.selectedFiles.size
+      println(s"$n files selected")
+      val fileName = chooser.selectedFiles(0).getName
+      println(s"1: $fileName")
+      //        val df1 = createRDD(spark, outPath, selectedFile.get(0).getName)//.as[GHCNData]
+      val rdd1 = createRDD(outPath, fileName)
+      //        println(rdd1.count())
 
-        var rdd = rdd1
-//        println(s"dataframe 1 created w/ ${rdd1.count()} records")
-        if (n > 1) {
-          for (i <- 1 until n) {
-            println(s"${i + 1}: ${chooser.selectedFiles(i).getName}")
-            //            val df2 = createRDD(spark, outPath, selectedFile.get(i).getName)
-            val rdd2 = createRDD(outPath, chooser.selectedFiles(i).getName)
-//            println(s"dataframe $i created w/ ${rdd2.count()} records")
-            rdd = rdd.union(rdd2)
-            println("create union of dataframes")
-          } // for
-        } // if
-//        println(s"union created w/ ${rdd.count()} records")
-
-        // from rdd to dataframe
-        val sqlContext = spark.sqlContext
-        import sqlContext.implicits._
-        val df = rdd.toDF()
-
-        // from dataframe to dataset
-        val ds = df
-          .withColumnRenamed("id", "sid")
-          .withColumnRenamed("element", "obs")
-          .as[GHCNData]
-
-        val parquetFile = outPath + "/" + "CSN####" + ".parquet"
-        df.write.mode(SaveMode.Overwrite).parquet(parquetFile)
-        println("parquet file saved")
-        val newDF = sqlContext.read.parquet(parquetFile)
-        newDF.show(11)
-        println(f"of ${newDF.count()}%,d records in parquet file $parquetFile")
+      var rdd = rdd1
+      //        println(s"dataframe 1 created w/ ${rdd1.count()} records")
+      if (n > 1) {
+        for (i <- 1 until n) {
+          println(s"${i + 1}: ${chooser.selectedFiles(i).getName}")
+          //            val df2 = createRDD(spark, outPath, selectedFile.get(i).getName)
+          val rdd2 = createRDD(outPath, chooser.selectedFiles(i).getName)
+          //            println(s"dataframe $i created w/ ${rdd2.count()} records")
+          rdd = rdd.union(rdd2)
+          println("create union of dataframes")
+        } // for
       } // if
+      //        println(s"union created w/ ${rdd.count()} records")
+
+      // from rdd to dataframe
+      val sqlContext = spark.sqlContext
+      import sqlContext.implicits._
+      val df = rdd.toDF()
+
+      // from dataframe to dataset
+      val ds = df
+        .withColumnRenamed("id", "sid")
+        .withColumnRenamed("element", "obs")
+        .as[GHCNData]
+
+      val parquetFile = outPath + "/" + "CSN###1" + ".parquet"
+      df.write.mode(SaveMode.Overwrite).parquet(parquetFile)
+      println("parquet file saved")
+      val newDF = sqlContext.read.parquet(parquetFile)
+      newDF.show(11)
+      println(f"of ${newDF.count()}%,d records in parquet file $parquetFile")
+    } // if
 
   } catch {
     case e: UnsupportedOperationException =>
